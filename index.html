@@ -558,6 +558,9 @@
             // --- EVENT LISTENERS ---
             cantidadInput.addEventListener('input', calcularPrecioTotal);
             
+           // =================================================================================
+            // REEMPLAZA TU BLOQUE form.addEventListener CON ESTE CÓDIGO MEJORADO
+            // =================================================================================
             form.addEventListener('submit', function (event) {
                 event.preventDefault();
 
@@ -566,7 +569,6 @@
                     return;
                 }
                 
-                // Deshabilitar botón y mostrar estado de carga
                 submitButton.disabled = true;
                 submitButton.innerHTML = `<span class="loading"><span class="spinner"></span>Enviando...</span>`;
                 statusMessageDiv.style.display = 'none';
@@ -575,14 +577,27 @@
                     method: 'POST',
                     body: new FormData(form)
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.result === 'success') {
-                        mostrarMensaje('¡Pedido enviado con éxito! Gracias por su compra.', 'success');
-                        form.reset();
-                        calcularPrecioTotal();
-                    } else {
-                        throw new Error(data.message || 'Ocurrió un error desconocido al procesar el pedido.');
+                // --- CAMBIO CLAVE AQUÍ ---
+                // En lugar de .then(response => response.json()), obtenemos la respuesta como texto plano primero.
+                // Esto es mucho más robusto para las respuestas de Google Apps Script.
+                .then(response => response.text())
+                .then(text => {
+                    // Ahora intentamos convertir el texto a un objeto JSON.
+                    try {
+                        const data = JSON.parse(text);
+                        if (data.result === 'success') {
+                            // ¡ÉXITO! Ahora sí se ejecuta esta parte.
+                            mostrarMensaje('¡Pedido enviado con éxito! Gracias por su compra.', 'success');
+                            form.reset();
+                            calcularPrecioTotal();
+                        } else {
+                            // Si el script devolvió un error conocido.
+                            throw new Error(data.message || 'Ocurrió un error en el servidor.');
+                        }
+                    } catch (error) {
+                        // Si la respuesta del servidor no era un JSON válido.
+                        console.error("Error al parsear la respuesta del servidor:", text);
+                        throw new Error('La respuesta del servidor no fue válida.');
                     }
                 })
                 .catch(error => {
@@ -590,11 +605,14 @@
                     mostrarMensaje(`Error al enviar el pedido: ${error.message}`, 'error');
                 })
                 .finally(() => {
-                    // Volver a habilitar el botón
+                    // Esto se ejecuta siempre, al final de todo.
                     submitButton.disabled = false;
                     submitButton.innerHTML = 'Enviar pedido';
                 });
             });
+            // =================================================================================
+            // FIN DEL BLOQUE REEMPLAZADO
+            // =================================================================================```
 
             // --- FUNCIÓN PARA MOSTRAR MENSAJES DE ESTADO ---
             function mostrarMensaje(mensaje, tipo) {
